@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satisfactory Server Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #fff; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #ff6b35; font-size: 2.5em; margin-bottom: 10px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .metric-card { background: #2d2d2d; padding: 20px; border-radius: 10px; text-align: center; border-left: 4px solid #ff6b35; }
+        .metric-value { font-size: 2em; font-weight: bold; color: #ff6b35; }
+        .metric-label { font-size: 0.9em; color: #ccc; margin-top: 5px; }
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .chart-container { background: #2d2d2d; padding: 20px; border-radius: 10px; }
+        .chart-title { font-size: 1.2em; margin-bottom: 15px; color: #ff6b35; }
+        .players-table { background: #2d2d2d; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #444; }
+        .table th { background: #3d3d3d; color: #ff6b35; }
+        .table tr:hover { background: #3d3d3d; }
+        .error-log { background: #2d2d2d; padding: 20px; border-radius: 10px; max-height: 400px; overflow-y: auto; }
+        .error-item { padding: 8px; margin: 5px 0; background: #3d3d3d; border-radius: 5px; font-size: 0.9em; }
+        .error-warning { border-left: 3px solid #ffa500; }
+        .error-error { border-left: 3px solid #ff4444; }
+        .loading { text-align: center; padding: 50px; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏭 Satisfactory Server Analytics</h1>
+            <p>Real-time insights from your factory server logs</p>
+        </div>
+
+        <div id="loading" class="loading">Loading analytics data...</div>
+        
+        <div id="dashboard" style="display: none;">
+            <!-- Summary Metrics -->
+            <div class="summary-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="totalPlayers">0</div>
+                    <div class="metric-label">Unique Players</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="totalJoins">0</div>
+                    <div class="metric-label">Total Joins</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="serverDays">0</div>
+                    <div class="metric-label">Server Days Active</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="totalErrors">0</div>
+                    <div class="metric-label">Total Errors</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="loggingGaps">0</div>
+                    <div class="metric-label">Logging Gaps</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <div class="chart-title">Daily Player Activity</div>
+                    <canvas id="dailyActivityChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Player Join Distribution</div>
+                    <canvas id="playerJoinsChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Server Uptime Periods</div>
+                    <canvas id="serverUptimeChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Session Duration Distribution</div>
+                    <canvas id="sessionDurationChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">Logging Gaps Timeline</div>
+                    <canvas id="loggingGapsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Player Statistics Table -->
+            <div class="players-table">
+                <div class="chart-title">Player Statistics</div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Total Joins</th>
+                            <th>Playtime (Hours)</th>
+                            <th>Avg Session (Hours)</th>
+                            <th>Min Session (Hours)</th>
+                            <th>Max Session (Hours)</th>
+                            <th>First Seen</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="playersTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Recent Errors -->
+            <div class="error-log">
+                <div class="chart-title">Recent Errors & Warnings</div>
+                <div id="errorsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let metricsData = null;
+
+        async function loadMetrics() {
+            try {
+                const response = await fetch('satis_metrics.json');
+                metricsData = await response.json();
+                renderDashboard();
+            } catch (error) {
+                document.getElementById('loading').innerHTML = 
+                    '<p style="color: #ff4444;">Error loading metrics data. Make sure satis_scanner.py has been run and satis_metrics.json exists.</p>';
+            }
+        }
+
+        function renderDashboard() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+
+            // Update summary metrics
+            document.getElementById('totalPlayers').textContent = metricsData.summary.total_unique_players;
+            document.getElementById('totalJoins').textContent = metricsData.summary.total_join_events;
+            document.getElementById('serverDays').textContent = metricsData.summary.server_span_days;
+            document.getElementById('totalErrors').textContent = metricsData.summary.total_errors;
+            document.getElementById('loggingGaps').textContent = metricsData.summary.total_logging_gaps || 0;
+
+            // Render charts
+            renderDailyActivityChart();
+            renderPlayerJoinsChart();
+            renderServerUptimeChart();
+            renderSessionDurationChart();
+            renderLoggingGapsChart();
+            
+            // Render tables
+            renderPlayersTable();
+            renderErrorsList();
+        }
+
+        function renderDailyActivityChart() {
+            const ctx = document.getElementById('dailyActivityChart').getContext('2d');
+            const dailyData = metricsData.daily_activity;
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(dailyData),
+                    datasets: [{
+                        label: 'Player Joins',
+                        data: Object.values(dailyData),
+                        borderColor: '#ff6b35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#ccc' } },
+                        y: { ticks: { color: '#ccc' } }
+                    }
+                }
+            });
+        }
+
+        function renderPlayerJoinsChart() {
+            const ctx = document.getElementById('playerJoinsChart').getContext('2d');
+            const players = Object.entries(metricsData.players)
+                .sort((a, b) => b[1].total_joins - a[1].total_joins)
+                .slice(0, 10);
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: players.map(p => p[0]),
+                    datasets: [{
+                        label: 'Total Joins',
+                        data: players.map(p => p[1].total_joins),
+                        backgroundColor: '#ff6b35'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#ccc' } },
+                        y: { ticks: { color: '#ccc' } }
+                    }
+                }
+            });
+        }
+
+        function renderServerUptimeChart() {
+            const ctx = document.getElementById('serverUptimeChart').getContext('2d');
+            const periods = metricsData.server_periods || [];
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: periods.map(p => p.file),
+                    datasets: [{
+                        label: 'Uptime (Hours)',
+                        data: periods.map(p => p.duration_hours.toFixed(1)),
+                        backgroundColor: '#4CAF50'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#ccc' } },
+                        y: { ticks: { color: '#ccc' } }
+                    }
+                }
+            });
+        }
+
+        function renderSessionDurationChart() {
+            const ctx = document.getElementById('sessionDurationChart').getContext('2d');
+            const sessions = metricsData.sessions || [];
+            const durations = sessions.map(s => Math.round(s.duration_minutes));
+            
+            // Create histogram bins
+            const bins = [0, 15, 30, 60, 120, 240, 480];
+            const binCounts = new Array(bins.length - 1).fill(0);
+            
+            durations.forEach(duration => {
+                for (let i = 0; i < bins.length - 1; i++) {
+                    if (duration >= bins[i] && duration < bins[i + 1]) {
+                        binCounts[i]++;
+                        break;
+                    }
+                }
+            });
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['0-15min', '15-30min', '30-60min', '1-2hr', '2-4hr', '4-8hr'],
+                    datasets: [{
+                        label: 'Session Count',
+                        data: binCounts,
+                        backgroundColor: '#9C27B0'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: {
+                        x: { ticks: { color: '#ccc' } },
+                        y: { ticks: { color: '#ccc' } }
+                    }
+                }
+            });
+        }
+
+        function renderLoggingGapsChart() {
+            const ctx = document.getElementById('loggingGapsChart').getContext('2d');
+            const gaps = metricsData.logging_gaps || [];
+            
+            if (gaps.length === 0) {
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#ccc';
+                ctx.textAlign = 'center';
+                ctx.fillText('No logging gaps detected', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: gaps.map((gap, i) => `Gap ${i + 1}`),
+                    datasets: [{
+                        label: 'Gap Duration (Days)',
+                        data: gaps.map(gap => gap.duration_days.toFixed(1)),
+                        backgroundColor: '#FF6B6B'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { 
+                        legend: { labels: { color: '#fff' } },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const gap = gaps[context.dataIndex];
+                                    return [
+                                        `After: ${gap.after_file}`,
+                                        `Before: ${gap.before_file}`,
+                                        `Duration: ${gap.duration_hours.toFixed(1)} hours`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#ccc' } },
+                        y: { ticks: { color: '#ccc' } }
+                    }
+                }
+            });
+        }
+
+        function renderPlayersTable() {
+            const tbody = document.getElementById('playersTableBody');
+            const players = Object.entries(metricsData.players)
+                .sort((a, b) => b[1].total_playtime_hours - a[1].total_playtime_hours);
+            
+            tbody.innerHTML = players.map(([name, stats]) => `
+                <tr>
+                    <td>${name}</td>
+                    <td>${stats.total_joins}</td>
+                    <td>${stats.total_playtime_hours.toFixed(1)}</td>
+                    <td>${stats.avg_session_hours.toFixed(2)}</td>
+                    <td>${stats.min_session_hours.toFixed(2)}</td>
+                    <td>${stats.max_session_hours.toFixed(2)}</td>
+                    <td>${new Date(stats.first_seen).toLocaleDateString()}</td>
+                    <td>${new Date(stats.last_seen).toLocaleDateString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderErrorsList() {
+            const errorsList = document.getElementById('errorsList');
+            const errors = metricsData.errors || [];
+            
+            errorsList.innerHTML = errors.slice(-20).reverse().map(error => `
+                <div class="error-item ${error.level === 'Error' ? 'error-error' : 'error-warning'}">
+                    <strong>${error.level}</strong> - ${new Date(error.timestamp).toLocaleString()}<br>
+                    <span style="font-size: 0.8em;">${error.message}</span>
+                </div>
+            `).join('');
+        }
+
+        // Load data when page loads
+        loadMetrics();
+    </script>
+</body>
+</html>

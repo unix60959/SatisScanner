@@ -1,0 +1,120 @@
+{
+  "summary": {
+    "total_log_files": 4,
+    "total_unique_players": 4,
+    "total_join_events": 42,
+    "total_sessions": 38,
+    "total_errors": 156,
+    "total_connections": 89,
+    "analysis_date": "2025-01-27T10:30:00",
+    "server_span_days": 107,
+    "first_activity": "2025-07-27T11:10:47",
+    "last_activity": "2025-11-11T22:43:47"
+  },
+  "players": {
+    "Relé": {
+      "total_joins": 28,
+      "total_playtime_hours": 14.5,
+      "first_seen": "2025-07-27T11:10:47",
+      "last_seen": "2025-08-06T07:25:33",
+      "avg_session_minutes": 31.2
+    },
+    "Cosmic250": {
+      "total_joins": 8,
+      "total_playtime_hours": 4.2,
+      "first_seen": "2025-07-28T14:22:15",
+      "last_seen": "2025-08-05T19:45:22",
+      "avg_session_minutes": 28.5
+    },
+    "Jonpro97": {
+      "total_joins": 4,
+      "total_playtime_hours": 2.1,
+      "first_seen": "2025-07-29T16:33:44",
+      "last_seen": "2025-08-02T20:15:11",
+      "avg_session_minutes": 32.8
+    },
+    "unix60959": {
+      "total_joins": 2,
+      "total_playtime_hours": 1.0,
+      "first_seen": "2025-08-01T12:45:33",
+      "last_seen": "2025-08-03T15:22:18",
+      "avg_session_minutes": 30.0
+    }
+  },
+  "sessions": [
+    {
+      "username": "Relé",
+      "start": "2025-07-27T11:10:47",
+      "end": "2025-07-27T11:40:47",
+      "duration_minutes": 30,
+      "date": "2025-07-27"
+    },
+    {
+      "username": "Relé",
+      "start": "2025-07-27T15:22:33",
+      "end": "2025-07-27T16:15:33",
+      "duration_minutes": 53,
+      "date": "2025-07-27"
+    }
+  ],
+  "server_periods": [
+    {
+      "file": "FactoryGame (2).log",
+      "start": "2025-07-27T06:07:56",
+      "end": "2025-08-06T07:31:06",
+      "duration_hours": 241.4
+    },
+    {
+      "file": "FactoryGame (3).log",
+      "start": "2025-10-27T06:07:34",
+      "end": "2025-11-09T12:42:08",
+      "duration_hours": 318.6
+    },
+    {
+      "file": "FactoryGame (4).log",
+      "start": "2025-11-09T06:42:49",
+      "end": "2025-11-09T12:46:18",
+      "duration_hours": 6.1
+    },
+    {
+      "file": "FactoryGame (5).log",
+      "start": "2025-11-11T14:28:29",
+      "end": "2025-11-11T22:43:47",
+      "duration_hours": 8.3
+    }
+  ],
+  "daily_activity": {
+    "2025-07-27": 8,
+    "2025-07-28": 6,
+    "2025-07-29": 5,
+    "2025-07-30": 4,
+    "2025-07-31": 3,
+    "2025-08-01": 7,
+    "2025-08-02": 4,
+    "2025-08-03": 2,
+    "2025-08-04": 1,
+    "2025-08-05": 1,
+    "2025-08-06": 1
+  },
+  "errors": [
+    {
+      "timestamp": "2025-07-27T11:15:33",
+      "level": "Warning",
+      "message": "LogNet: UNetConnection::Close: Connection timeout",
+      "file": "FactoryGame (2).log"
+    },
+    {
+      "timestamp": "2025-07-28T14:22:45",
+      "level": "Error",
+      "message": "LogGame: Error: RegisterPlayerWithSession failed",
+      "file": "FactoryGame (2).log"
+    }
+  ],
+  "recent_connections": [
+    {
+      "timestamp": "2025-11-11T22:43:47",
+      "ip": "::ffff:73.242.35.205",
+      "type": "connection_attempt"
+    }
+  ]
+}
