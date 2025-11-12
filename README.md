@@ -105,7 +105,7 @@ The analyzer tracks:
 
 ## 📝 Notes
 
-- Session durations are estimated (30min default timeout)
+- Session durations are intelligently estimated based on join patterns and time gaps
 - Large log files are processed efficiently with streaming
 - Dashboard requires local server due to browser CORS restrictions
 - Server runs on port 8000 by default
