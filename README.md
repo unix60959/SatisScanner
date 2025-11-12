@@ -26,7 +26,7 @@ A comprehensive analytics solution for Satisfactory dedicated server logs that e
 - `dashboard.html` - Interactive web dashboard
 - `satis_metrics.json` - Generated metrics data (created after running scanner)
 - `satis_metrics_sample.json` - Example output format
-- `run_analysis.bat` - Windows batch file with instructions
+- `LICENSE` - MIT license
 
 ## 🛠️ Setup & Usage
 
